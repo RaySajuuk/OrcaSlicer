@@ -1,57 +1,57 @@
 name: Build Mac AppleSilicon
 
-on:
+on: 
     push:
-        branches:
-        - main
-        paths:
-        - 'src/**'
-        - 'deps/**'
-        - '**/CMakeLists.txt'
-        - 'version.inc'
-        - 'bbl/**'
-        - 'resources/**'
-    
-    pull_request:
-        branches:
-        - main
-        paths:
-        - 'src/**'
-        - 'deps/**'
-        - '**/CMakeLists.txt'
-        - 'version.inc'
-        - 'bbl/**'
-        - 'resources/**'
+      branches: 
+       - main
+      paths:
+       - 'src/**'
+       - 'deps/**'
+       - '**/CMakeLists.txt'
+       - 'version.inc'
+       - 'bbl/**'
+       - 'resources/**'
 
+    pull_request:
+      branches: 
+       - main 
+      paths:
+       - 'src/**'
+       - 'deps/**'
+       - '**/CMakeLists.txt'
+       - 'version.inc'
+       - 'bbl/**'
+       - 'resources/**'
+    
 jobs:
-    build_osx_arm64:
+  build_osx_arm64:
     name: Build Mac AppleSilicon
     runs-on: macos-13
-    
+
     steps:
-        - uses: actions/checkout@v3
-        
-        - name: Install tools
+      - uses: actions/checkout@v3
+
+      - name: Install tools
         run: |
           brew install cmake git gettext zstd
-        - run: mkdir -p ${{ github.workspace }}/deps/build_arm64
-        - run: mkdir -p ${{ github.workspace }}/deps/build_arm64/OrcaSlicer_dep_arm64
-        
-        # - name: build deps
-        #   id: cache_deps
-        #   uses: actions/cache@v3
-        #   env:
-        #     cache-name: ${{ runner.os }}-cache-orcaslicer_deps_arm64
-        #   with:
-        #     path: ${{ github.workspace }}/deps/build/OrcaSlicer_dep
-        #     key: build-${{ env.cache-name }}
-        
-        # - if: ${{ steps.cache_deps.outputs.cache-hit != 'true' }}
-        #   name: build deps
-        #   working-directory: ${{ github.workspace }}
-        #   continue-on-error: true
-        #   run: ./build_release_macos.sh -d -a arm64
-        - name: Download and extract deps
+      - run: mkdir -p ${{ github.workspace }}/deps/build_arm64
+      - run: mkdir -p ${{ github.workspace }}/deps/build_arm64/OrcaSlicer_dep_arm64
+
+      # - name: build deps
+      #   id: cache_deps
+      #   uses: actions/cache@v3
+      #   env:
+      #     cache-name: ${{ runner.os }}-cache-orcaslicer_deps_arm64
+      #   with:
+      #     path: ${{ github.workspace }}/deps/build/OrcaSlicer_dep
+      #     key: build-${{ env.cache-name }}
+
+      # - if: ${{ steps.cache_deps.outputs.cache-hit != 'true' }}
+      #   name: build deps
+      #   working-directory: ${{ github.workspace }}
+      #   continue-on-error: true
+      #   run: ./build_release_macos.sh -d -a arm64
+      - name: Download and extract deps
         working-directory: ${{ github.workspace }}
         run: |
           curl -LJO https://github.com/SoftFever/FileSharing/releases/download/OrcaSlicer_deps_Mar/OrcaSlicer_dep_mac_arm64_11-03-2023.tar.gz
@@ -59,87 +59,67 @@ jobs:
           chown -R $(id -u):$(id -g) ${{ github.workspace }}/deps/build_arm64/OrcaSlicer_dep_arm64
           ls -l ${{ github.workspace }}/deps/build_arm64/OrcaSlicer_dep_arm64
           rm OrcaSlicer_dep_mac_arm64_11-03-2023.tar.gz
-        
-        
-        - name: Build studio
+
+
+      - name: Build studio
         working-directory: ${{ github.workspace }}
         run: |
           ./build_release_macos.sh -s -n -a arm64
-        
-        - name: Codesign app bundle
-        # Extract the secrets we defined earlier as environment variable
+
+      - name: Codesign app
+        working-directory: ${{ github.workspace }}
+        if: github.event_name != 'pull_request'
         env:
           MACOS_CERTIFICATE: ${{ secrets.PROD_MACOS_CERTIFICATE }}
           MACOS_CERTIFICATE_PWD: ${{ secrets.PROD_MACOS_CERTIFICATE_PWD }}
           MACOS_CERTIFICATE_NAME: ${{ secrets.PROD_MACOS_CERTIFICATE_NAME }}
           MACOS_CI_KEYCHAIN_PWD: ${{ secrets.PROD_MACOS_CI_KEYCHAIN_PWD }}
         run: |
-        # Turn our base64-encoded certificate back to a regular .p12 file
-          echo $MACOS_CERTIFICATE | base64 --decode > certificate.p12
-        # We need to create a new keychain, otherwise using the certificate will prompt
-        # with a UI dialog asking for the certificate password, which we can't
-        # use in a headless CI environment
-        
+          echo $MACOS_CERTIFICATE | base64 --decode > certificate.p12        
           security create-keychain -p "$MACOS_CI_KEYCHAIN_PWD" build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p "$MACOS_CI_KEYCHAIN_PWD" build.keychain
           security import certificate.p12 -k build.keychain -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CI_KEYCHAIN_PWD" build.keychain
-        # We finally codesign our app bundle, specifying the Hardened runtime option
-        
-        /usr/bin/codesign --force -s "$MACOS_CERTIFICATE_NAME" --options runtime ${{ github.workspace }}/build_arm64/OrcaSlicer/OrcaSlicer.app -v
-        
-        - name: "Notarize app bundle"
-        # Extract the secrets we defined earlier as environment variables
+          /usr/bin/codesign --force -s "$MACOS_CERTIFICATE_NAME" --options runtime ${{ github.workspace }}/build_arm64/OrcaSlicer/OrcaSlicer.app -v
+
+      - name: "Notarize app bundle"
         env:
           PROD_MACOS_NOTARIZATION_APPLE_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_APPLE_ID }}
           PROD_MACOS_NOTARIZATION_TEAM_ID: ${{ secrets.PROD_MACOS_NOTARIZATION_TEAM_ID }}
           PROD_MACOS_NOTARIZATION_PWD: ${{ secrets.PROD_MACOS_NOTARIZATION_PWD }}
-        run: |
+
         # Store the notarization credentials so that we can prevent a UI password dialog
-        # from blocking the CI
+        run: |
           echo "Create keychain profile"
           xcrun notarytool store-credentials "notarytool-profile" --apple-id "$PROD_MACOS_NOTARIZATION_APPLE_ID" --team-id "$PROD_MACOS_NOTARIZATION_TEAM_ID" --password "$PROD_MACOS_NOTARIZATION_PWD"
-            
-        # We can't notarize an app bundle directly, but we need to compress it as an archive.
-        # Therefore, we create a zip file containing our app bundle, so that we can send it to the
-        # notarization service
           echo "Creating temp notarization archive"
           ditto -c -k --keepParent "${{ github.workspace }}/build_arm64/OrcaSlicer/OrcaSlicer.app" "${{ github.workspace }}/build_arm64/OrcaSlicer/notarization.zip"
-            
-        # Here we send the notarization request to the Apple's Notarization service, waiting for the result.
-        # This typically takes a few seconds inside a CI environment, but it might take more depending on the App
-        # characteristics. Visit the Notarization docs for more information and strategies on how to optimize it if
-        # you're curious
-        
           echo "Notarize app"
           xcrun notarytool submit "${{ github.workspace }}/build_arm64/OrcaSlicer/notarization.zip" --keychain-profile "notarytool-profile" --wait
-        
-        # Finally, we need to "attach the staple" to our executable, which will allow our app to be
-        # validated by macOS even when an internet connection is not available.
           echo "Attach staple"
           xcrun stapler staple "${{ github.workspace }}/build_arm64/OrcaSlicer/OrcaSlicer.app"
-        
-        - name: Pack app
+          
+      - name: Pack app
         working-directory: ${{ github.workspace }}
         run: |
           export ver=$(grep '^#define SoftFever_VERSION' ./build_arm64/src/libslic3r/libslic3r_version.h | cut -d ' ' -f3)
           ver="_V${ver//\"}"
           cd ${{ github.workspace }}/build_arm64/OrcaSlicer
           zip -FSrq OrcaSlicer${ver}_Mac_AppleSilicon_signed.zip ./OrcaSlicer.app
-        
-        # (wip: staple failed, error 65)
-        # - name: Notarize the app
-        #   run: |
-        #     cd ${{ github.workspace }}/build_arm64/OrcaSlicer
-        #     xcrun notarytool store-credentials "notarytool-profile" --apple-id "${{ secrets.APPLE_DEV_ACCOUNT }}" --team-id "${{ secrets.TEAM_ID }}" --password "${{ secrets.APP_PWD }}"
-        #     ditto -c -k --keepParent "OrcaSlicer.app" "OrcaSlicer.zip"
-        #     xcrun notarytool submit "OrcaSlicer.zip" --keychain-profile "notarytool-profile" --wait
-        #     xcrun stapler staple OrcaSlicer.app
-        #     zip -FSrq OrcaSlicer_Mac_notarized.zip OrcaSlicer.app
-        
-        - name: Upload artifacts
+
+      # (wip: staple failed, error 65)
+      # - name: Notarize the app 
+      #   run: |
+      #     cd ${{ github.workspace }}/build_arm64/OrcaSlicer
+      #     xcrun notarytool store-credentials "notarytool-profile" --apple-id "${{ secrets.APPLE_DEV_ACCOUNT }}" --team-id "${{ secrets.TEAM_ID }}" --password "${{ secrets.APP_PWD }}"
+      #     ditto -c -k --keepParent "OrcaSlicer.app" "OrcaSlicer.zip"
+      #     xcrun notarytool submit "OrcaSlicer.zip" --keychain-profile "notarytool-profile" --wait
+      #     xcrun stapler staple OrcaSlicer.app
+      #     zip -FSrq OrcaSlicer_Mac_notarized.zip OrcaSlicer.app
+
+      - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-            name: OrcaSlicer_Mac_AppleSilicon
-            path: ${{ github.workspace }}/build_arm64/OrcaSlicer/OrcaSlicer*.zip
+          name: OrcaSlicer_Mac_AppleSilicon
+          path: ${{ github.workspace }}/build_arm64/OrcaSlicer/OrcaSlicer*.zip
