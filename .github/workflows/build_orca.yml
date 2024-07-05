@@ -135,7 +135,7 @@ jobs:
         if: github.ref == 'refs/heads/main' && inputs.os == 'macos-14'
         uses: WebFreak001/deploy-nightly@v3.1.0
         with:
-          upload_url: https://api.github.com/repos/RaySajuuk/OrcaSlicer/releases/163972609/assets{?name,label}
+          upload_url: https://uploads.github.com/repos/RaySajuuk/OrcaSlicer/releases/163972609/assets{?name,label}
           release_id: 163972609
           asset_path: ${{ github.workspace }}/OrcaSlicer_Mac_${{inputs.arch}}_${{ env.ver }}.dmg
           asset_name: OrcaSlicer_Mac_${{inputs.arch}}_${{ env.ver }}.dmg
@@ -201,7 +201,7 @@ jobs:
         if: github.ref == 'refs/heads/main' && inputs.os == 'windows-latest'
         uses: WebFreak001/deploy-nightly@v3.1.0
         with:
-          upload_url: https://api.github.com/repos/RaySajuuk/OrcaSlicer/releases/163972609/assets{?name,label}
+          upload_url: https://uploads.github.com/repos/RaySajuuk/OrcaSlicer/releases/163972609/assets{?name,label}
           release_id: 163972609
           asset_path: ${{ github.workspace }}/build/OrcaSlicer_Windows_${{ env.ver }}_portable.zip
           asset_name: OrcaSlicer_Windows_${{ env.ver }}_portable.zip
@@ -212,7 +212,7 @@ jobs:
         if: github.ref == 'refs/heads/main' && inputs.os == 'windows-latest'
         uses: WebFreak001/deploy-nightly@v3.1.0
         with:
-          upload_url: https://api.github.com/repos/RaySajuuk/OrcaSlicer/releases/163972609/assets{?name,label}
+          upload_url: https://uploads.github.com/repos/RaySajuuk/OrcaSlicer/releases/163972609/assets{?name,label}
           release_id: 163972609
           asset_path: ${{ github.workspace }}/build/OrcaSlicer_Windows_Installer_${{ env.ver }}.exe
           asset_name: OrcaSlicer_Windows_Installer_${{ env.ver }}.exe
@@ -279,7 +279,7 @@ jobs:
           ubuntu-ver-str: ${{ (inputs.os == 'ubuntu-24.04' && '_Ubuntu2404') || '' }}
         uses: WebFreak001/deploy-nightly@v3.1.0
         with:
-          upload_url: https://api.github.com/repos/RaySajuuk/OrcaSlicer/releases/163972609/assets{?name,label}
+          upload_url: https://uploads.github.com/repos/RaySajuuk/OrcaSlicer/releases/163972609/assets{?name,label}
           release_id: 163972609
           asset_path: ./build/OrcaSlicer_Linux${{ env.ubuntu-ver-str }}_${{ env.ver }}.AppImage
           asset_name: OrcaSlicer_Linux${{ env.ubuntu-ver-str }}_${{ env.ver }}.AppImage
@@ -290,7 +290,7 @@ jobs:
         if: ${{ ! env.ACT && github.ref == 'refs/heads/main' && inputs.os == 'ubuntu-20.04' }}
         uses: WebFreak001/deploy-nightly@v3.1.0
         with:
-          upload_url: https://api.github.com/repos/RaySajuuk/OrcaSlicer/releases/163972609/assets{?name,label}
+          upload_url: https://uploads.github.com/repos/RaySajuuk/OrcaSlicer/releases/163972609/assets{?name,label}
           release_id: 163972609
           asset_path: ${{ github.workspace }}/resources/profiles/orca_custom_preset_tests.zip
           asset_name: orca_custom_preset_tests.zip
